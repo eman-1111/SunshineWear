@@ -19,6 +19,8 @@ import android.content.Intent;
 import android.content.IntentSender;
 import android.database.Cursor;
 import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -42,6 +44,7 @@ import android.widget.ProgressBar;
 import com.example.android.sunshine.data.SunshinePreferences;
 import com.example.android.sunshine.data.WeatherContract;
 import com.example.android.sunshine.sync.SunshineSyncUtils;
+import com.example.android.sunshine.utilities.SunshineWeatherUtils;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.ResultCallback;
@@ -67,34 +70,12 @@ import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends AppCompatActivity implements
         LoaderManager.LoaderCallbacks<Cursor>,
-        ForecastAdapter.ForecastAdapterOnClickHandler,
-        DataApi.DataListener,
-        GoogleApiClient.ConnectionCallbacks,
-        GoogleApiClient.OnConnectionFailedListener {
+        ForecastAdapter.ForecastAdapterOnClickHandler{
 
     private final String TAG = MainActivity.class.getSimpleName();
 
-    //Request code for launching the Intent to resolve Google Play services errors.
-    private static final int REQUEST_RESOLVE_ERROR = 1000;
 
 
-    private static final String START_ACTIVITY_PATH = "/start-activity";
-    private static final String COUNT_PATH = "/temp";
-    private static final String IMAGE_PATH = "/image";
-    private static final String IMAGE_KEY = "photo";
-    private static final String COUNT_KEY = "temp";
-
-    private GoogleApiClient mGoogleApiClient;
-    private boolean mResolvingError = false;
-    private boolean mCameraSupported = false;
-
-    private String mHighT;
-    private String mLowT;
-    private Bitmap mImageBitmap;
-
-    // Send DataItems.
-    private ScheduledExecutorService mGeneratorExecutor;
-    private ScheduledFuture<?> mDataItemGeneratorFuture;
     /*
      * The columns of data that we are interested in displaying within our MainActivity's list of
      * weather data.
@@ -207,16 +188,6 @@ public class MainActivity extends AppCompatActivity implements
 
         SunshineSyncUtils.initialize(this);
 
-
-        //wear api
-        mGeneratorExecutor = new ScheduledThreadPoolExecutor(1);
-
-        mGoogleApiClient = new GoogleApiClient.Builder(this)
-                .addApi(Wearable.API)
-                .addConnectionCallbacks(this)
-                .addOnConnectionFailedListener(this)
-                .build();
-
     }
 
     /**
@@ -303,7 +274,14 @@ public class MainActivity extends AppCompatActivity implements
         if (mPosition == RecyclerView.NO_POSITION) mPosition = 0;
         mRecyclerView.smoothScrollToPosition(mPosition);
         if (data.getCount() != 0) showWeatherDataView();
+
+
     }
+
+
+
+
+
 
     /**
      * Called when a previously created loader is being reset, and thus making its data unavailable.
@@ -408,161 +386,17 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     protected void onStart() {
         super.onStart();
-        if (!mResolvingError) {
-            mGoogleApiClient.connect();
-        }
+
     }
 
-    @Override
-    public void onResume() {
-        super.onResume();
-//        mDataItemGeneratorFuture = mGeneratorExecutor.scheduleWithFixedDelay(
-//                new DataItemGenerator(), 1, 5, TimeUnit.SECONDS);
-    }
-
-    @Override
-    public void onPause() {
-        super.onPause();
-        mDataItemGeneratorFuture.cancel(true /* mayInterruptIfRunning */);
-    }
 
     @Override
     protected void onStop() {
-        if (!mResolvingError && (mGoogleApiClient != null) && (mGoogleApiClient.isConnected())) {
-            Wearable.DataApi.removeListener(mGoogleApiClient, this);
-            mGoogleApiClient.disconnect();
-        }
+
         super.onStop();
     }
 
-    /**
-     * Builds an {@link com.google.android.gms.wearable.Asset} from a bitmap. The image that we get
-     * back from the camera in "data" is a thumbnail size. Typically, your image should not exceed
-     * 320x320 and if you want to have zoom and parallax effect in your app, limit the size of your
-     * image to 640x400. Resize your image before transferring to your wearable device.
-     */
-    private static Asset toAsset(Bitmap bitmap) {
-        ByteArrayOutputStream byteStream = null;
-        try {
-            byteStream = new ByteArrayOutputStream();
-            bitmap.compress(Bitmap.CompressFormat.PNG, 100, byteStream);
-            return Asset.createFromBytes(byteStream.toByteArray());
-        } finally {
-            if (null != byteStream) {
-                try {
-                    byteStream.close();
-                } catch (IOException e) {
-                    // ignore
-                }
-            }
-        }
-    }
-
-    /**
-     * Sends the asset that was created from the photo we took by adding it to the Data Item store.
-     */
-    private void sendPhoto(Asset asset) {
-        PutDataMapRequest dataMap = PutDataMapRequest.create(IMAGE_PATH);
-        dataMap.getDataMap().putAsset(IMAGE_KEY, asset);
-        dataMap.getDataMap().putLong("time", new Date().getTime());
-        PutDataRequest request = dataMap.asPutDataRequest();
-        request.setUrgent();
-
-        Wearable.DataApi.putDataItem(mGoogleApiClient, request)
-                .setResultCallback(new ResultCallback<DataApi.DataItemResult>() {
-                    @Override
-                    public void onResult(DataApi.DataItemResult dataItemResult) {
-                        LOGD(TAG, "Sending image was successful: " + dataItemResult.getStatus()
-                                .isSuccess());
-                    }
-                });
-    }
-
-    /**
-     * Generates a DataItem based on an incrementing count.
-     */
-    private class DataItemGenerator implements Runnable {
-
-        private int count = 0;
-
-        @Override
-        public void run() {
-            PutDataMapRequest putDataMapRequest = PutDataMapRequest.create(COUNT_PATH);
-            putDataMapRequest.getDataMap().putInt(COUNT_KEY, count++);
-
-            PutDataRequest request = putDataMapRequest.asPutDataRequest();
-            request.setUrgent();
-
-            LOGD(TAG, "Generating DataItem: " + request);
-            if (!mGoogleApiClient.isConnected()) {
-                return;
-            }
-            Wearable.DataApi.putDataItem(mGoogleApiClient, request)
-                    .setResultCallback(new ResultCallback<DataApi.DataItemResult>() {
-                        @Override
-                        public void onResult(DataApi.DataItemResult dataItemResult) {
-                            if (!dataItemResult.getStatus().isSuccess()) {
-                                Log.e(TAG, "ERROR: failed to putDataItem, status code: "
-                                        + dataItemResult.getStatus().getStatusCode());
-                            }
-                        }
-                    });
-        }
-    }
-    /**
-     * As simple wrapper around Log.d
-     */
-    private static void LOGD(final String tag, String message) {
-        if (Log.isLoggable(tag, Log.DEBUG)) {
-            Log.d(tag, message);
-        }
-    }
-    @Override
-    public void onConnected(@Nullable Bundle bundle) {
-        LOGD(TAG, "Google API Client was connected");
-        mResolvingError = false;
-        Wearable.DataApi.addListener(mGoogleApiClient, this);
-    }
-
-    @Override
-    public void onConnectionSuspended(int i) {
-        LOGD(TAG, "Connection to Google API client was suspended");
-
-    }
-
-    @Override
-    public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
-        if (!mResolvingError) {
-
-            if (connectionResult.hasResolution()) {
-                try {
-                    mResolvingError = true;
-                    connectionResult.startResolutionForResult(this, REQUEST_RESOLVE_ERROR);
-                } catch (IntentSender.SendIntentException e) {
-                    // There was an error with the resolution intent. Try again.
-                    mGoogleApiClient.connect();
-                }
-            } else {
-                Log.e(TAG, "Connection to Google API client has failed");
-                mResolvingError = false;
-                Wearable.DataApi.removeListener(mGoogleApiClient, this);
-            }
-        }
-    }
 
 
-    @Override
-    public void onDataChanged(DataEventBuffer dataEventBuffer) {
-        LOGD(TAG, "onDataChanged: " + dataEventBuffer);
-
-        for (DataEvent event : dataEventBuffer) {
-            if (event.getType() == DataEvent.TYPE_CHANGED) {
-               //todo
-            } else if (event.getType() == DataEvent.TYPE_DELETED) {
-               //todo
-            }
-        }
-
-    }
 
 }
