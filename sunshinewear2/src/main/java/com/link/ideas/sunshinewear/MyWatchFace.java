@@ -21,6 +21,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.res.Resources;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -45,6 +47,7 @@ import com.google.android.gms.wearable.DataEventBuffer;
 import com.google.android.gms.wearable.Wearable;
 
 import java.lang.ref.WeakReference;
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
@@ -53,13 +56,19 @@ import java.util.concurrent.TimeUnit;
  * Digital watch face with seconds. In ambient mode, the seconds aren't displayed. On devices with
  * low-bit ambient mode, the text is drawn without anti-aliasing in ambient mode.
  */
-public class MyWatchFace extends CanvasWatchFaceService  {
+public class MyWatchFace extends CanvasWatchFaceService {
 
     private static final String TAG = "MyWatchFace";
 
     private static final Typeface NORMAL_TYPEFACE =
             Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL);
-
+    String highTemp = "";
+    String lowTemp = "";
+    int imageId = 0;
+    private static final String IMAGE_KEY = "photo";
+    private static final String HIGH_KEY = "high_temp";
+    private static final String LOW_KEY = "low_temp";
+    private static final String START_ACTIVITY_PATH = "/new-weather";
     /**
      * Update rate in milliseconds for interactive mode. We update once a second since seconds are
      * displayed in interactive mode.
@@ -75,7 +84,6 @@ public class MyWatchFace extends CanvasWatchFaceService  {
     public Engine onCreateEngine() {
         return new Engine();
     }
-
 
 
     private static class EngineHandler extends Handler {
@@ -98,8 +106,7 @@ public class MyWatchFace extends CanvasWatchFaceService  {
         }
     }
 
-    private class Engine extends CanvasWatchFaceService.Engine implements DataApi.DataListener,
-            GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener{
+    private class Engine extends CanvasWatchFaceService.Engine {
         final Handler mUpdateTimeHandler = new EngineHandler(this);
         boolean mRegisteredTimeZoneReceiver = false;
         Paint mBackgroundPaint;
@@ -114,6 +121,15 @@ public class MyWatchFace extends CanvasWatchFaceService  {
                 invalidate();
             }
         };
+
+        private final BroadcastReceiver mWeatherReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                weatherDataReceived(intent);
+            }
+
+        };
+
         float mXOffset;
         float mYOffset;
         float mTextSpacingHeight;
@@ -122,13 +138,16 @@ public class MyWatchFace extends CanvasWatchFaceService  {
          * disable anti-aliasing in ambient mode.
          */
 
-        GoogleApiClient mGoogleApiClient = new GoogleApiClient.Builder(MyWatchFace.this)
-                .addConnectionCallbacks(this)
-                .addOnConnectionFailedListener(this)
-                .addApi(Wearable.API)
-                .build();
 
         boolean mLowBitAmbient;
+
+
+        private void weatherDataReceived(Intent intent) {
+            highTemp = intent.getStringExtra(HIGH_KEY);
+            lowTemp = intent.getStringExtra(LOW_KEY);
+            imageId = intent.getIntExtra(IMAGE_KEY, 0);
+            invalidate();
+        }
 
         @Override
         public void onCreate(SurfaceHolder holder) {
@@ -158,7 +177,6 @@ public class MyWatchFace extends CanvasWatchFaceService  {
         }
 
 
-
         @Override
         public void onDestroy() {
             mUpdateTimeHandler.removeMessages(MSG_UPDATE_TIME);
@@ -181,29 +199,23 @@ public class MyWatchFace extends CanvasWatchFaceService  {
             super.onVisibilityChanged(visible);
 
             if (visible) {
-                mGoogleApiClient.connect();
 
                 registerReceiver();
 
                 // Update time zone and date formats, in case they changed while we weren't visible.
                 mCalendar.setTimeZone(TimeZone.getDefault());
                 //todo set the current date
-               // initFormats();
+                // initFormats();
             } else {
                 unregisterReceiver();
 
-                if (mGoogleApiClient != null && mGoogleApiClient.isConnected()) {
-                    Wearable.DataApi.removeListener(mGoogleApiClient, this);
-                    mGoogleApiClient.disconnect();
-                }
+
             }
 
             // Whether the timer should be running depends on whether we're visible (as well as
             // whether we're in ambient mode), so we may need to start or stop the timer.
             updateTimer();
         }
-
-
 
 
         private void registerReceiver() {
@@ -213,6 +225,8 @@ public class MyWatchFace extends CanvasWatchFaceService  {
             mRegisteredTimeZoneReceiver = true;
             IntentFilter filter = new IntentFilter(Intent.ACTION_TIMEZONE_CHANGED);
             MyWatchFace.this.registerReceiver(mTimeZoneReceiver, filter);
+            IntentFilter weatherFilter = new IntentFilter("ACTION_WEATHER_CHANGED");
+            MyWatchFace.this.registerReceiver(mWeatherReceiver, weatherFilter);
         }
 
         private void unregisterReceiver() {
@@ -221,6 +235,7 @@ public class MyWatchFace extends CanvasWatchFaceService  {
             }
             mRegisteredTimeZoneReceiver = false;
             MyWatchFace.this.unregisterReceiver(mTimeZoneReceiver);
+            MyWatchFace.this.unregisterReceiver(mWeatherReceiver);
         }
 
         @Override
@@ -307,15 +322,24 @@ public class MyWatchFace extends CanvasWatchFaceService  {
             mCalendar.setTimeInMillis(now);
 
 
-            String text =  String.format("%d:%02d", mCalendar.get(Calendar.HOUR),
+            String text = String.format("%d:%02d", mCalendar.get(Calendar.HOUR),
                     mCalendar.get(Calendar.MINUTE));
+            String date = new SimpleDateFormat("EEE, MMM dd yyyy").format(mCalendar.getTime());
             //draw time
-            canvas.drawText(text, (bounds.width()/ 2) - 30, mYOffset, mTextPaint);
+            canvas.drawText(text, (bounds.width() / 2) - 20, mYOffset, mTextPaint);
             //draw date
-            canvas.drawText(text, (bounds.width()/ 2) - 50, mYOffset + (mTextSpacingHeight *2) , mTextPaintSmall);
+            canvas.drawText(date, (bounds.width() / 2) - 70, mYOffset + (mTextSpacingHeight * 2), mTextPaintSmall);
             //draw line
-            canvas.drawLine((bounds.width()/ 2) - 30, bounds.height()/2 + 20,
-                    (bounds.width()/ 2) + 30, bounds.height()/2+ 20, mTextPaintSmall) ;
+            canvas.drawLine((bounds.width() / 2) - 30, bounds.height() / 2 + 20,
+                    (bounds.width() / 2) + 30, bounds.height() / 2 + 20, mTextPaintSmall);
+            if (imageId != 0) {
+                Bitmap bitmap = BitmapFactory.decodeResource(getResources(),
+                        SunshineWearUtil.getSmallArtResourceIdForWeatherCondition(imageId));
+                //canvas.drawBitmap(bitmap,(bounds.width() / 2) - 30,weatherRowYOffset,weatherImage);
+
+                canvas.drawText(highTemp, (bounds.width() / 2) - 30, mYOffset + (mTextSpacingHeight * 4), mTextPaint);
+                canvas.drawText(lowTemp, (bounds.width() / 2) + 30, mYOffset + (mTextSpacingHeight * 4), mTextPaintSmall);
+            }
         }
 
         /**
@@ -350,25 +374,5 @@ public class MyWatchFace extends CanvasWatchFaceService  {
             }
         }
 
-        @Override
-        public void onConnected(@Nullable Bundle bundle) {
-
-        }
-
-        @Override
-        public void onConnectionSuspended(int i) {
-
-        }
-
-        @Override
-        public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
-
-        }
-
-        @Override
-        public void onDataChanged(DataEventBuffer dataEventBuffer) {
-
-        }
     }
-
 }

@@ -82,6 +82,9 @@ public class SunshineSyncTask {
                  */
                 boolean notificationsEnabled = SunshinePreferences.areNotificationsEnabled(context);
 
+
+                SunshineWearSync syncWithWear = new SunshineWearSync(context);
+                syncWithWear.initializeGoogleApiClient();
                 /*
                  * If the last notification was shown was more than 1 day ago, we want to send
                  * another notification to the user that the weather has been updated. Remember,

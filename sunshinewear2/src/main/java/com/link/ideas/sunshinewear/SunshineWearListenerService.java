@@ -36,11 +36,11 @@ public class SunshineWearListenerService extends WearableListenerService {
 
     }
 
-    private void sendWeatherData(String highTemp, String lowTemp, int weatherId){
+    private void sendWeatherData(String highTemp, String lowTemp, int imageID){
         Intent weatherIntent = new Intent("ACTION_WEATHER_CHANGED");
         weatherIntent.putExtra(HIGH_KEY, highTemp)
                 .putExtra(LOW_KEY, lowTemp)
-                .putExtra(IMAGE_KEY, weatherId);
+                .putExtra(IMAGE_KEY, imageID);
         sendBroadcast(weatherIntent);
     }
 

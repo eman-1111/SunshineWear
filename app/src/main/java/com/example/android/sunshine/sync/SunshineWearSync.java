@@ -93,14 +93,15 @@ public class SunshineWearSync implements GoogleApiClient.ConnectionCallbacks
     private void getWearData(Cursor cursor2) {
         if (cursor2 != null) {
             if (cursor2.moveToPosition(TODAY_WEATHER)) {
-                int weatherId = cursor2.getInt(MainActivity.INDEX_WEATHER_CONDITION_ID);
+                cursor2.moveToPosition(TODAY_WEATHER);
+                int weatherId = cursor2.getInt(INDEX_WEATHER_CONDITION_ID);
                 int weatherImageId = SunshineWeatherUtils
                         .getSmallArtResourceIdForWeatherCondition(weatherId);
 
-                double highInCelsius = cursor2.getDouble(MainActivity.INDEX_WEATHER_MAX_TEMP);
+                double highInCelsius = cursor2.getDouble(INDEX_WEATHER_MAX_TEMP);
                 String highString = SunshineWeatherUtils.formatTemperature(mContext, highInCelsius);
 
-                double lowInCelsius = cursor2.getDouble(MainActivity.INDEX_WEATHER_MIN_TEMP);
+                double lowInCelsius = cursor2.getDouble(INDEX_WEATHER_MIN_TEMP);
                 String lowString = SunshineWeatherUtils.formatTemperature(mContext, lowInCelsius);
 
                 sendData(weatherImageId, highString, lowString);
