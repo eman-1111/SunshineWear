@@ -1,4 +1,4 @@
-package com.link.ideas.sunshinewear;
+package com.example.android.sunshine;
 
 import android.util.Log;
 

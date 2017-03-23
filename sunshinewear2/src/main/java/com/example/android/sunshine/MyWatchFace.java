@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.link.ideas.sunshinewear;
+package com.example.android.sunshine;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
