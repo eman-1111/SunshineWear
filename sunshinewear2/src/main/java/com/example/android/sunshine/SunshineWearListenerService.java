@@ -1,6 +1,7 @@
 package com.example.android.sunshine;
 
 import android.content.Intent;
+import android.util.Log;
 
 import com.google.android.gms.wearable.DataEvent;
 import com.google.android.gms.wearable.DataEventBuffer;
@@ -29,6 +30,8 @@ public class SunshineWearListenerService extends WearableListenerService {
                     String highTemp = dataMap.getString(HIGH_KEY);
                     String lowTemp = dataMap.getString(LOW_KEY);
                     int imageID    = dataMap.getInt(IMAGE_KEY);
+
+                    Log.e("send temp Serv", "imageID " + imageID + "highTemp " + highTemp +"lowTemp " + lowTemp );
                     sendWeatherData(highTemp,lowTemp,imageID);
                 }
             }

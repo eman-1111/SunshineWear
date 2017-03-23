@@ -146,6 +146,7 @@ public class MyWatchFace extends CanvasWatchFaceService {
             highTemp = intent.getStringExtra(HIGH_KEY);
             lowTemp = intent.getStringExtra(LOW_KEY);
             imageId = intent.getIntExtra(IMAGE_KEY, 0);
+            Log.e("send temp App" ,"imageID " + imageId + "highTemp " + highTemp +"lowTemp " + lowTemp );
             invalidate();
         }
 
@@ -335,10 +336,12 @@ public class MyWatchFace extends CanvasWatchFaceService {
             if (imageId != 0) {
                 Bitmap bitmap = BitmapFactory.decodeResource(getResources(),
                         SunshineWearUtil.getSmallArtResourceIdForWeatherCondition(imageId));
-                //canvas.drawBitmap(bitmap,(bounds.width() / 2) - 30,weatherRowYOffset,weatherImage);
+                canvas.drawBitmap(bitmap,(bounds.width() / 2) - 70,
+                        mYOffset + (mTextSpacingHeight * 5), mTextPaint);
 
-                canvas.drawText(highTemp, (bounds.width() / 2) - 30, mYOffset + (mTextSpacingHeight * 4), mTextPaint);
-                canvas.drawText(lowTemp, (bounds.width() / 2) + 30, mYOffset + (mTextSpacingHeight * 4), mTextPaintSmall);
+                canvas.drawText(highTemp, (bounds.width() / 2) - 30, mYOffset + (mTextSpacingHeight * 5), mTextPaint);
+
+                canvas.drawText(lowTemp, (bounds.width() / 2) + 30, mYOffset + (mTextSpacingHeight * 5), mTextPaintSmall);
             }
         }
 

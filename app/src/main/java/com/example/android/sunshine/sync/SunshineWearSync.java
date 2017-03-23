@@ -121,6 +121,7 @@ public class SunshineWearSync implements GoogleApiClient.ConnectionCallbacks
         PutDataRequest requestData = dataMapImage.asPutDataRequest();
         requestData.setUrgent();
 
+        Log.e("send temp App" ,"imageID " + imageId + "highTemp " + highT +"lowTemp " + lowT );
         Wearable.DataApi.putDataItem(mGoogleApiClient, requestData)
                 .setResultCallback(new ResultCallback<DataApi.DataItemResult>() {
                     @Override
