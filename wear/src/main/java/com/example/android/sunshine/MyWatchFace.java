@@ -20,6 +20,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -68,7 +69,7 @@ public class MyWatchFace extends CanvasWatchFaceService {
     private static final String IMAGE_KEY = "photo";
     private static final String HIGH_KEY = "high_temp";
     private static final String LOW_KEY = "low_temp";
-    private static final String START_ACTIVITY_PATH = "/new-weather";
+    private static final String OLD_WEATHER = "old-weather";
     /**
      * Update rate in milliseconds for interactive mode. We update once a second since seconds are
      * displayed in interactive mode.
@@ -146,7 +147,14 @@ public class MyWatchFace extends CanvasWatchFaceService {
             highTemp = intent.getStringExtra(HIGH_KEY);
             lowTemp = intent.getStringExtra(LOW_KEY);
             imageId = intent.getIntExtra(IMAGE_KEY, 0);
-            Log.e("send temp App" ,"imageID " + imageId + "highTemp " + highTemp +"lowTemp " + lowTemp );
+            Log.e("send temp App", "imageID " + imageId + "highTemp " + highTemp + "lowTemp " + lowTemp);
+
+            SharedPreferences.Editor editor = getSharedPreferences(OLD_WEATHER, MODE_PRIVATE).edit();
+            editor.putString(HIGH_KEY, highTemp);
+            editor.putString(LOW_KEY, lowTemp);
+            editor.putInt(IMAGE_KEY, imageId);
+            editor.commit();
+
             invalidate();
         }
 
@@ -172,7 +180,7 @@ public class MyWatchFace extends CanvasWatchFaceService {
             mTextPaint = createTextPaint(resources.getColor(R.color.digital_text));
 
             mTextPaintSmall = new Paint();
-            mTextPaintSmall = createTextPaint(resources.getColor(R.color.digital_text));
+            mTextPaintSmall = createTextPaint(resources.getColor(R.color.digital_text_sec));
 
             mCalendar = Calendar.getInstance();
         }
@@ -327,21 +335,40 @@ public class MyWatchFace extends CanvasWatchFaceService {
                     mCalendar.get(Calendar.MINUTE));
             String date = new SimpleDateFormat("EEE, MMM dd yyyy").format(mCalendar.getTime());
             //draw time
-            canvas.drawText(text, (bounds.width() / 2) - 20, mYOffset, mTextPaint);
+            canvas.drawText(text, (bounds.width() / 2) -40 , mYOffset, mTextPaint);
             //draw date
-            canvas.drawText(date, (bounds.width() / 2) - 70, mYOffset + (mTextSpacingHeight * 2), mTextPaintSmall);
+            canvas.drawText(date, (bounds.width() / 2) - 90, mYOffset + (mTextSpacingHeight * 2), mTextPaintSmall);
             //draw line
-            canvas.drawLine((bounds.width() / 2) - 30, bounds.height() / 2 + 20,
-                    (bounds.width() / 2) + 30, bounds.height() / 2 + 20, mTextPaintSmall);
+            canvas.drawLine((bounds.width() / 2) - 40, bounds.height() / 2 + 20,
+                    (bounds.width() / 2) + 40, bounds.height() / 2 + 20, mTextPaintSmall);
             if (imageId != 0) {
                 Bitmap bitmap = BitmapFactory.decodeResource(getResources(),
                         SunshineWearUtil.getSmallArtResourceIdForWeatherCondition(imageId));
-                canvas.drawBitmap(bitmap,(bounds.width() / 2) - 70,
-                        mYOffset + (mTextSpacingHeight * 5), mTextPaint);
+                canvas.drawBitmap(bitmap, (bounds.width() / 2) - 90,
+                        mYOffset + (mTextSpacingHeight * 3), mTextPaint);
 
-                canvas.drawText(highTemp, (bounds.width() / 2) - 30, mYOffset + (mTextSpacingHeight * 5), mTextPaint);
+                canvas.drawText(highTemp, (bounds.width() / 2) - 20, mYOffset + (mTextSpacingHeight * 5) , mTextPaint);
 
-                canvas.drawText(lowTemp, (bounds.width() / 2) + 30, mYOffset + (mTextSpacingHeight * 5), mTextPaintSmall);
+                canvas.drawText(lowTemp, (bounds.width() / 2) + 70, mYOffset + (mTextSpacingHeight * 5), mTextPaintSmall);
+            } else {
+
+                SharedPreferences prefs = getSharedPreferences(OLD_WEATHER, MODE_PRIVATE);
+                int imageId = prefs.getInt(IMAGE_KEY, 0);
+                String highTemp = prefs.getString(HIGH_KEY, "0");
+                String lowTemp = prefs.getString(LOW_KEY, "0");
+//                if (imageId != 0) {
+
+                Bitmap bitmap = BitmapFactory.decodeResource(getResources(),
+                        SunshineWearUtil.getSmallArtResourceIdForWeatherCondition(imageId));
+                canvas.drawBitmap(bitmap, (bounds.width() / 2) - 90,
+                        mYOffset + (mTextSpacingHeight * 3), mTextPaint);
+
+                canvas.drawText(highTemp, (bounds.width() / 2) - 20, mYOffset + (mTextSpacingHeight * 5) , mTextPaint);
+
+                canvas.drawText(lowTemp, (bounds.width() / 2) + 70, mYOffset + (mTextSpacingHeight * 5), mTextPaintSmall);
+//                }
+
+
             }
         }
 

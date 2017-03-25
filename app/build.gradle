@@ -40,5 +40,5 @@ dependencies {
     androidTestCompile 'com.android.support.test:rules:0.5'
 
     compile 'com.google.android.gms:play-services-wearable:9.2.0'
-    wearApp project(':sunshinewear2')
+    wearApp project(':wear')
 }
