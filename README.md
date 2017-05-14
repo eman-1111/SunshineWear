@@ -2,7 +2,12 @@
 
 Built a watch face for Android Wear so users can access Sunshine's weather information at a glance.
 
-#whats in it:
-* Android wear apis
+Main features of SunshineWear
+------------------------------
 
-nanodegree iconPart of the Android Developer Nanodegree Program
+* Fundamentals of Android Wear.
+* Design for multiple watch form factors.
+* Communicate between a mobile device and a wearable device.
+
+
+Part of the Android Developer Nanodegree Program
